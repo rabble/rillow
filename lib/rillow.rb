@@ -30,13 +30,13 @@ class Rillow
      :get_chart => 'GetChart',
      :get_region_chart => 'GetRegionChart',
      :get_demographics => 'GetDemographics',
+     :get_comps => "GetComps",
      :get_region_children => 'GetRegionChildren',
-     :get_comps => "GetDeepSearchResults",
-     :get_deep_search_results => 'GetDeepSearchResults',
-     :get_monthlypayments => 'GetMonthlyPayments',
-     :get_deep_comps => 'GetDeepComps',
      :get_ratesummary => 'GetRateSummary',
-     
+     :get_monthly_payments => 'GetMonthlyPayments',
+     :get_deep_search_results => 'GetDeepSearchResults',
+     :get_deep_comps => 'GetDeepComps',
+     :get_region_postings => 'GetRegionPostings'
    }
    
    
