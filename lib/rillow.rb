@@ -3,7 +3,8 @@ require 'net/http'
 require 'uri'
 require 'rubygems'
 require 'xmlsimple'
-require 'rillow_helper'
+require 'cgi'
+require File.dirname(__FILE__) + "/rillow_helper"
 
 # This api is created by Leo Chan on 10/29/2007.
 # There is no license requirement.  Use it or copy any part of the code that you want to use.
@@ -21,13 +22,35 @@ require 'rillow_helper'
 # result.to_hash
 # result.find_attribute 'valudationRange'
 class Rillow
-   @@zillow_webservice_url='http://www.zillow.com/webservice/'
+   attr_accessor :webservice_url, :zwsid
+   
+   VALID_METHODS => {
+     :get_search_results => 'GetSearchResults',
+     :get_zestimate => 'GetZestimate',
+     :get_chart => 'GetChart',
+     :get_region_chart => 'GetRegionChart',
+     :get_demographics => 'GetDemographics',
+     :get_region_children => 'GetRegionChildren',
+     :get_comps => "GetDeepSearchResults",
+     :get_deep_search_results => 'GetDeepSearchResults',
+     :get_monthlypayments => 'GetMonthlyPayments',
+     :get_deep_comps => 'GetDeepComps',
+     :get_ratesummary => 'GetRateSummary',
+     
+   }
+   
    
    # rillow = Rillow.new('your-zillow-service identifier')
-   def initialize(zwsid)
-      @zwsid=zwsid
+   def initialize(my_zwsid, my_webservice_url= 'http://www.zillow.com/webservice/')
+      zwsid = my_zwsid
+      webservice_url = my_webservice_url
    end
-
+   
+   def method_missing(method, *args)
+     super(method, args) unless VALID_METHODS.has_key? method
+     fetch_from_zillow(VALID_METHODS[method], args)
+   end
+   
    #The get_search_results finds a property for a specified address. 
    #The content returned contains the address for the property or properties as well as the Zillow Property ID (ZPID) and current Zestimate. 
    #It also includes the date the Zestimate was computed, a valuation range and the Zestimate ranking for the property within its ZIP code. 
@@ -38,12 +61,8 @@ class Rillow
    # citystatezip city&state or zip code
    #Example: 
    # rillow = Rillow.new('your-zillow-service identifier')
-   # result = rillow.get_search_results('2114 Bigelow Ave','Seattle, WA')
+   # result = rillow.get_search_results(:address => '2114 Bigelow Ave', :citystatezip => 'Seattle, WA')
    # result.to_hash
-   def get_search_results(address,citystatezip)
-      url_s=@@zillow_webservice_url+'GetSearchResults.htm?zws-id='+@zwsid+'&address='+address.to_s+'&citystatezip='+citystatezip.to_s
-      fetch_result(url_s)
-   end
 
    #For a specified Zillow property identifier (zpid), the get_zestimate returns:
    #1.  The most recent property Zestimate
@@ -58,12 +77,9 @@ class Rillow
    # zpid zillow property id
    #Example: 
    # rillow = Rillow.new('your-zillow-service identifier')
-   # result = rillow.get_zestimate('48749425')
+   # result = rillow.get_zestimate(:zpid => '48749425')
    # result.to_hash
-   def get_zestimate(zpid)
-     url_s=@@zillow_webservice_url+'GetZestimate.htm?zws-id='+@zwsid+'&zpid='+zpid.to_s
-     fetch_result(url_s)
-   end
+
 
    #The get_chart api generates a URL for an image file that displays historical Zestimates for a specific property. 
    #The API accepts as input the Zillow Property ID as well as a chart type: either percentage or dollar value change. 
@@ -82,21 +98,8 @@ class Rillow
    # "5years" and "10years". If unspecified, the value defaults to "1year"
    #Example: 
    # rillow = Rillow.new('your-zillow-service identifier')
-   # result = rillow.get_chart('48749425','percent',:width=>300, :height=>150, :chart_duration=>'5years')
+   # result = rillow.get_chart(:zpid => '48749425',:unit_type => 'percent',:width=>300, :height=>150, :chart_duration=>'5years')
    # result.to_hash
-   def get_chart(zpid,unit_type,options={})
-     url_s=@@zillow_webservice_url+'GetChart.htm?zws-id='+@zwsid+'&zpid='+zpid.to_s+'&unit-type='+unit_type.to_s
-     if options[:width]!=nil then
-        url_s=url_s+'&width='+options[:width].to_s
-     end
-     if options[:height]!=nil then
-        url_s=url_s+'&height='+options[:height].to_s
-     end
-     if options[:chart_duration]!=nil then
-        url_s=url_s+'&chartDuration='+options[:chart_duration].to_s
-     end
-     fetch_result(url_s)
-   end
 
    #The get_region_chart generates a URL for an image file that displays the historical Zestimates for a specific geographic region. 
    #The API accepts as input the name of the region as well as a chart type: either percentage or dollar value change. #
@@ -117,30 +120,8 @@ class Rillow
    # "5years" and "10years". If unspecified, the value defaults to "1year"
    #Example: 
    # rillow = Rillow.new('your-zillow-service identifier')
-   # result = rillow.get_region_chart('percent',:city=>'seattle',:state=>'WA',:width=>300, :height=>150, :chart_duration=>'5years')
+   # result = rillow.get_region_chart(:unit_type =>'percent',:city=>'seattle',:state=>'WA',:width=>300, :height=>150, :chart_duration=>'5years')
    # result.to_hash
-   def get_region_chart(unit_type,options={})
-     url_s=@@zillow_webservice_url+'GetRegionChart.htm?zws-id='+@zwsid+'&unit-type='+unit_type.to_s
-     if options[:city]!=nil then
-        url_s=url_s+'&city='+options[:city].to_s
-     end
-     if options[:state]!=nil then
-        url_s=url_s+'&state='+options[:state].to_s
-     end
-     if options[:zip]!=nil then
-        url_s=url_s+'&ZIP='+options[:zip].to_s
-     end
-     if options[:width]!=nil then
-        url_s=url_s+'&width='+options[:width].to_s
-     end
-     if options[:height]!=nil then
-        url_s=url_s+'&height='+options[:height].to_s
-     end
-     if options[:chart_duration]!=nil then
-        url_s=url_s+'&chartDuration='+options[:chart_duration].to_s
-     end
-     fetch_result(url_s)
-   end
 
    #For a specified region, the GetDemographics API returns a set of demographic data which includes:
    # * A URL linking to the corresponding demographics page at Zillow.com
@@ -161,22 +142,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_demographics(:city=>'seattle',:state=>'WA',:neighborhood=>'Ballard')
    # result.to_hash
-   def get_demographics(options={})
-     url_s=@@zillow_webservice_url+'GetDemographics.htm?zws-id='+@zwsid
-     if options[:city]!=nil then
-        url_s=url_s+'&city='+options[:city].to_s
-     end
-     if options[:state]!=nil then
-        url_s=url_s+'&state='+options[:state].to_s
-     end
-     if options[:rid]!=nil then
-        url_s=url_s+'&rid='+options[:rid].to_s
-     end
-     if options[:neighborhood]!=nil then
-        url_s=url_s+'&neighborhood='+options[:neighborhood].to_s
-     end
-     fetch_result(url_s)
-   end
 
    # For a specified region, the get_region_children API returns a list of subregions with the following information:
    # * Subregion Type
@@ -205,25 +170,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_region_children(:city=>'seattle',:state=>'WA',:country=>'united states',:childtype=>'neighborhood')
    # result.to_hash
-   def get_region_children(options={})
-     url_s=@@zillow_webservice_url+'GetRegionChildren.htm?zws-id='+@zwsid
-     if options[:city]!=nil then
-        url_s=url_s+'&city='+options[:city].to_s
-     end
-     if options[:state]!=nil then
-        url_s=url_s+'&state='+options[:state].to_s
-     end
-     if options[:country]!=nil then
-        url_s=url_s+'&country='+options[:country].to_s
-     end
-     if options[:rid]!=nil then
-        url_s=url_s+'&rid='+options[:rid].to_s
-     end
-     if options[:childtype]!=nil then
-        url_s=url_s+'&childtype='+options[:childtype].to_s
-     end
-     fetch_result(url_s)
-   end
 
    #The get_comps returns a list of comparable recent sales for a specified property. 
    #The result set returned contains the address, Zillow property identifier, and Zestimate for the comparable properties and 
@@ -236,10 +182,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_comps('48749425',5)
    # result.to_hash
-   def get_comps(zpid,count)
-     url_s=@@zillow_webservice_url+'GetComps.htm?zws-id='+@zwsid+'&zpid='+zpid.to_s+'&count='+count.to_s
-     fetch_result(url_s)
-   end
 
    #The get_deep_search_results finds a property for a specified address 
    #(or, if no exact match for a property is found, a list of closely matching properties is returned). 
@@ -253,10 +195,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_deep_search_results('2114 Bigelow Ave','Seattle, WA')
    # result.to_hash
-   def get_deep_search_results(address,citystatezip)
-     url_s=@@zillow_webservice_url+'GetDeepSearchResults.htm?zws-id='+@zwsid+'&address='+address.to_s+'&citystatezip='+citystatezip.to_s
-     fetch_result(url_s)
-   end
 
    #The get_deep_comps api returns a list of comparable recent sales for a specified property. 
    #The result set returned contains the address, Zillow property identifier, 
@@ -270,10 +208,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_deep_comps('48749425',5)
    # result.to_hash
-   def get_deep_comps(zpid,count)
-     url_s=@@zillow_webservice_url+'GetDeepComps.htm?zws-id='+@zwsid+'&zpid='+zpid.to_s+'&count='+count.to_s
-     fetch_result(url_s)
-   end
 
    # Get monthly mortgage payments.
    # price is required.
@@ -286,13 +220,6 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_monthlypayments(350000, {:down => 15, :zip => '33432'})
    # result.to_hash
-   def get_monthlypayments(price, options={})
-     url_s = @@zillow_webservice_url+'GetMonthlyPayments.htm?zws-id='+@zwsid+'&price='+price.to_s
-     url_s = url_s+'&down='+options[:down].to_s if options[:down]
-     url_s = url_s+'&dollarsdown='+options[:dollarsdown].to_s if options[:dollarsdown]
-     url_s = url_s+'&zip='+options[:zip].to_s if options[:zip]
-     fetch_result(url_s)
-   end
 
    # Get current mortgage rates.
    # No params.
@@ -301,13 +228,22 @@ class Rillow
    # rillow = Rillow.new('your-zillow-service identifier')
    # result = rillow.get_ratesummary
    # result.to_hash
-   def get_ratesummary()
-     url_s = @@zillow_webservice_url+'GetRateSummary.htm?zws-id='+@zwsid
-     fetch_result(url_s)
-   end
 
- private
-
+  private
+    def fetch_from_zillow(method,options) 
+      options.merge!(:zws_id, zwsid)
+      fetch_result join(webservice_url, method, '.htm?', to_aguments(options))
+    end
+    
+    def to_arguments(options)
+      options.map {|k,v| "#{clean_param_key(k)}=#{CGI.escape(v.to_s)}" }.join("&")
+    end
+    
+    def clean_param_key(param_key)
+      return 'chartDuration' if param_key == :chart_duration
+      k.to_s.gsub('-','_')
+    end
+    
    def fetch_result(url_s)
       url = URI.parse(URI.escape(url_s))
       res = Net::HTTP.get_response(url)
