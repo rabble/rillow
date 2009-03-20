@@ -18,13 +18,13 @@ require File.dirname(__FILE__) + "/rillow_helper"
 #
 # Example:
 # rillow = Rillow.new('your-zillow-service identifier')
-# result = rillow.get_search_results('2114 Bigelow Ave','Seattle, WA')
+# result = rillow.get_search_results(:address => '2114 Bigelow Ave', :citystatezip => 'Seattle WA')
 # result.to_hash
 # result.find_attribute 'valudationRange'
 class Rillow
    attr_accessor :webservice_url, :zwsid
    
-   VALID_METHODS => {
+   VALID_METHODS = {
      :get_search_results => 'GetSearchResults',
      :get_zestimate => 'GetZestimate',
      :get_chart => 'GetChart',
@@ -35,15 +35,18 @@ class Rillow
      :get_ratesummary => 'GetRateSummary',
      :get_monthly_payments => 'GetMonthlyPayments',
      :get_deep_search_results => 'GetDeepSearchResults',
+     :get_property_details => 'GetDeepSearchResults',
      :get_deep_comps => 'GetDeepComps',
-     :get_region_postings => 'GetRegionPostings'
+     :get_region_postings => 'GetRegionPostings',
+     :get_updated_property_details => 'GetUpdatedPropertyDetails'
    }
    
    
    # rillow = Rillow.new('your-zillow-service identifier')
    def initialize(my_zwsid, my_webservice_url= 'http://www.zillow.com/webservice/')
-      zwsid = my_zwsid
-      webservice_url = my_webservice_url
+      @zwsid= my_zwsid
+
+      @webservice_url = my_webservice_url
    end
    
    def method_missing(method, *args)
@@ -231,8 +234,9 @@ class Rillow
 
   private
     def fetch_from_zillow(method,options) 
-      options.merge!(:zws_id, zwsid)
-      fetch_result join(webservice_url, method, '.htm?', to_aguments(options))
+      options = options[0] if options.kind_of? Array
+      options.merge!({'zws-id', zwsid})
+      fetch_result [webservice_url, method, '.htm?', to_arguments(options)].join
     end
     
     def to_arguments(options)
@@ -241,16 +245,17 @@ class Rillow
     
     def clean_param_key(param_key)
       return 'chartDuration' if param_key == :chart_duration
-      k.to_s.gsub('-','_')
+      param_key.to_s.gsub('_','-')
     end
     
    def fetch_result(url_s)
-      url = URI.parse(URI.escape(url_s))
-      res = Net::HTTP.get_response(url)
-      doc = XmlSimple.xml_in res.body
-      class<<doc
+     puts "fetching: #{url_s}"
+     url = URI.parse(URI.escape(url_s))
+     res = Net::HTTP.get_response(url)
+     doc = XmlSimple.xml_in res.body
+     class<<doc
        include RillowHelper
-      end
-      return doc
+     end
+     return doc
    end
 end

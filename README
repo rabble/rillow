@@ -1,4 +1,5 @@
 # This api is created by Leo Chan on 10/29/2007.
+# Updated by danwoolley and then massively refactored by rabble 19-3-09.
 # There is no license requirement.  Use it or copy any part of the code that you want to use.
 # Use it at your own risk.  I am not liable for anything.  Just want to share it and hope it is useful for you
 # Rillow is a simple ruby wrapper to zillow webservice api: http://www.zillow.com/howto/api/APIOverview.htm
