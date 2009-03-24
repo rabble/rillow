@@ -27,6 +27,12 @@ describe Rillow do
       result['response'][0]['results'][0]['result'][0]['finishedSqFt'].to_s.should == "1744"
     end
     
+    it "should be able to do a lookup with just a zipcode and no city or state" do
+      result = @rillow.get_property_details :address => "955 12th St", :citystatezip => '95521'
+      result['response'][0]['results'][0]['result'][0]['bedrooms'].to_s.should == "5"
+    end
+    
+    
   end
   
 end
