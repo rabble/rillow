@@ -250,7 +250,7 @@ class Rillow
     
    def fetch_result(url_s)
      puts "fetching: #{url_s}"
-     url = URI.parse(URI.escape(url_s))
+     url = URI.parse(url_s)
      res = Net::HTTP.get_response(url)
      doc = XmlSimple.xml_in res.body
      class<<doc
